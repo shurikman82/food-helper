@@ -19,6 +19,8 @@ class CustomUser(AbstractUser):
         default=False,
         verbose_name='Подписан ли текущий пользователь на этого',
     )
+    password = models.CharField(max_length=150,
+                                verbose_name='Пароль')
 
     class Meta:
         verbose_name = 'Пользователь'

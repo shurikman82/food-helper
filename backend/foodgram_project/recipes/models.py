@@ -18,8 +18,11 @@ class Recipe(models.Model):
         User, on_delete=models.CASCADE,
         related_name='recipes', verbose_name='Автор рецепта',
     )
-    pub_date = models.DateTimeField(auto_now_add=True,
-                                    verbose_name='Дата публикации рецепта')
+    pub_date = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата публикации рецепта',
+        db_index=True,
+    )
     tags = models.ManyToManyField(
         'Tag', related_name='recipes', verbose_name='Теги рецепта',
     )
@@ -60,9 +63,9 @@ class Tag(models.Model):
 
 
 class Ingredient(models.Model):
-    name = models.CharField(max_length=200, required=True,
+    name = models.CharField(max_length=200,
                             verbose_name='Название ингредиента')
-    measurement_unit = models.CharField(max_length=200, required=True,
+    measurement_unit = models.CharField(max_length=200,
                                         verbose_name='Единица измерения')
 
     class Meta:
@@ -112,8 +115,11 @@ class Neo(models.Model):
         Recipe, on_delete=models.CASCADE,
         related_name='neo', verbose_name='Рецепт'
     )
-    pub_date = models.DateTimeField(auto_now_add=True,
-                                    verbose_name='Дата добавления в избранное')
+    pub_date = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата добавления в избранное',
+        db_index=True,
+    )
 
     class Meta:
         verbose_name = 'Избранный рецепт'
@@ -142,6 +148,7 @@ class ShoppingCart(models.Model):
     pub_date = models.DateTimeField(
         auto_now_add=True,
         verbose_name='Дата добавления в список покупок',
+        db_index=True,
     )
 
     class Meta:
