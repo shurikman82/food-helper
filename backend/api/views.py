@@ -1,15 +1,16 @@
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
-from djoser.views import UserViewSet, UserCreateViewSet
-from rest_framework import permissions, status, viewsets
+from djoser.views import UserViewSet
+from rest_framework import permissions, serializers, status, viewsets
 from .serializers import (
     CustomUserSerializer,
-    FollowSerializer,
-    CustomUserCreateSerializer,
+    FollowSerializer, FollowCreateSerializer, NeoSerializer, ShoppingCartSerializer,
+    CustomUserCreateSerializer, IngredientSerializer, RecipeCreateSerializer, RecipeShortSerializer,
+    RecipeSerializer, TagSerializer,
 )
 
-from .models import Follow
-
+from recipes.models import Recipe, Tag, Ingredient, Neo, RecipeIngredient
+from users.models import Follow
 
 
 
@@ -21,15 +22,42 @@ class CustomUserViewSet(UserViewSet):
     serializer_class = CustomUserSerializer
 
 
-class CustomUserCreateViewSet(UserCreateViewSet):
+class CustomUserCreateViewSet(UserViewSet):
     serializer_class = CustomUserCreateSerializer
     queryset = User.objects.all()
 
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError('Пользователь с таким никнеймом уже существует')
+        return value
 
-class FollowViewset(viewsets.ModelViewSet):
+
+class FollowViewSet(viewsets.ModelViewSet):
     queryset = Follow.objects.all()
-    serializer_class = FollowSerializer
-    permission_classes = (permissions.IsAuthenticated,)
 
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return FollowCreateSerializer
+        return FollowSerializer
+    
+    def get_queryset(self):
+        return Follow.objects.filter(user=self.request.user)
+    
+
+class TagViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Tag.objects.all()
+    serializer_class = TagSerializer
+
+
+class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Ingredient.objects.all()
+    serializer_class = IngredientSerializer
+
+
+class RecipeViewSet(viewsets.ModelViewSet):
+    queryset = Recipe.objects.all()
+
+    def get_serializer_class(self):
+        if self.request.method in ('POST', 'PATCH', 'DELETE'):
+            return RecipeCreateSerializer
+        return RecipeSerializer

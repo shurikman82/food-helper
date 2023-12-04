@@ -112,6 +112,7 @@ DJOSER = {
         'user': 'api.serializers.CustomUserSerializer',
         'current_user': 'api.serializers.CustomUserSerializer',
     },
+    'LOGIN_FIELD': 'email',
 }
 
 
