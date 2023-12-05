@@ -60,9 +60,30 @@ class IngredientSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'measurement_unit')
 
 
+class RecipeIngredientSerializer(serializers.ModelSerializer):
+    id = serializers.ReadOnlyField(source='ingredient.id')
+    name = serializers.ReadOnlyField(source='ingredient.name')
+    measurement_unit = serializers.ReadOnlyField(
+        source='ingredient.measurement_unit'
+    )
+
+    class Meta:
+        model = RecipeIngredient
+        fields = ('id', 'name', 'measurement_unit', 'amount')
+
+
+class RecipeIngredientCreateSerializer(serializers.ModelSerializer):
+    ingredient = serializers.PrimaryKeyRelatedField(source='ingredient', queryset=Ingredient.objects.all())
+    recipe = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = RecipeIngredient
+        fields = ('ingredient', 'amount', 'recipe')
+
+
 class RecipeSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
-    ingredients = IngredientSerializer(many=True, read_only=True)
+    ingredients = RecipeIngredientSerializer(source='ingredient_amount', many=True)
     author = CustomUserSerializer(read_only=True)
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
@@ -89,21 +110,18 @@ class RecipeSerializer(serializers.ModelSerializer):
     
 
 class RecipeShortSerializer(serializers.ModelSerializer):
-    image = serializers.SerializerMethodField()
+    tag = TagSerializer(many=True, read_only=True)
+    ingredients = RecipeIngredientSerializer(source='ingredient_amount', many=True)
+    author = CustomUserSerializer(read_only=True)
 
     class Meta:
         model = Recipe
-        fields = ('id', 'name', 'image', 'cooking_time')
+        fields = ('id', 'name', 'image', 'cooking_time', 'ingredients', 'author', 'tag')
 
-    def get_image(self, obj):
-        return obj.image.url
-    
 
 class RecipeCreateSerializer(serializers.ModelSerializer):
-    ingredients = serializers.PrimaryKeyRelatedField(
-        many=True,
-        queryset=Ingredient.objects.all()
-    )
+    ingredients = RecipeIngredientCreateSerializer(many=True)
+
     tags = serializers.PrimaryKeyRelatedField(
         many=True,
         queryset=Tag.objects.all()
@@ -161,7 +179,10 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
                 amount=ingredient['amount']
             )
         return super().update(instance, validated_data)
-    
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.context.get('request').user)
+
 
 class FollowSerializer(serializers.ModelSerializer):
     is_subscribed = serializers.SerializerMethodField()

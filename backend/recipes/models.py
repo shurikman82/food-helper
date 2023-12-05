@@ -30,12 +30,7 @@ class Recipe(models.Model):
         'Ingredient', related_name='ingredients',
         through='RecipeIngredient', verbose_name='Ингредиенты рецепта',
     )
-    is_favorited = models.BooleanField(
-        default=False, verbose_name='В избранном',
-    )
-    is_in_shopping_cart = models.BooleanField(
-        default=False, verbose_name='В списке покупок',
-    )
+
 
     class Meta:
         ordering = ('-pub_date',)
@@ -73,7 +68,7 @@ class Ingredient(models.Model):
         verbose_name_plural = 'Ингредиенты'
 
     def __str__(self):
-        return self.name - self.measurement_unit
+        return self.name + ' ' + self.measurement_unit
 
 
 class RecipeIngredient(models.Model):
