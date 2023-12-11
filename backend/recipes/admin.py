@@ -1,7 +1,7 @@
 from django.contrib import admin
 from import_export.admin import ImportExportMixin
 
-from .models import Ingredient, Recipe, Tag
+from .models import Ingredient, Recipe, RecipeIngredient, Tag
 
 
 class IngredientAdmin(ImportExportMixin, admin.ModelAdmin):
@@ -12,3 +12,4 @@ class IngredientAdmin(ImportExportMixin, admin.ModelAdmin):
 admin.site.register(Tag)
 admin.site.register(Recipe)
 admin.site.register(Ingredient, IngredientAdmin)
+admin.site.register(RecipeIngredient)

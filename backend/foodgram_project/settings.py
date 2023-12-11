@@ -13,7 +13,7 @@ SECRET_KEY = 'django-insecure-3(ipmw%_ap8r(833=-_w&)nj93)9g4#%%uj474dul_xk3&n1%k
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -114,6 +114,10 @@ DJOSER = {
         'current_user': 'api.serializers.CustomUserSerializer',
     },
     'LOGIN_FIELD': 'email',
+    'PERMISSIONS': {
+        'user': ['rest_framework.permissions.AllowAny'],
+        'user_list': ['rest_framework.permissions.AllowAny'],
+    },
 }
 
 

@@ -2,16 +2,18 @@ from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
 from rest_framework import permissions, serializers, status, viewsets
+from rest_framework.response import Response
+from rest_framework.decorators import action
+from rest_framework.permissions import SAFE_METHODS
 from .serializers import (
     CustomUserSerializer,
     FollowSerializer, FollowCreateSerializer, NeoSerializer, ShoppingCartSerializer,
-    CustomUserCreateSerializer, IngredientSerializer, RecipeCreateSerializer, RecipeShortSerializer,
+    CustomUserCreateSerializer, IngredientSerializer, RecipeIngredientCreateSerializer, RecipeCreateSerializer,
     RecipeSerializer, TagSerializer,
 )
 
-from recipes.models import Recipe, Tag, Ingredient, Neo, RecipeIngredient
+from recipes.models import Recipe, Tag, Ingredient, Neo, RecipeIngredient, ShoppingCart
 from users.models import Follow
-
 
 
 User = get_user_model()
@@ -58,7 +60,42 @@ class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
 
     def get_serializer_class(self):
-        if self.request.method in ('POST', 'PATCH', 'DELETE'):
-            return RecipeCreateSerializer
-        return RecipeSerializer
-    
+        if self.request.method in SAFE_METHODS:
+            return RecipeSerializer
+        return RecipeCreateSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
+
+    @action(
+        methods=['post', 'delete'],
+        detail=True,
+    )
+    def favorite(self, request, pk):
+        if request.method == 'POST':
+            return self.add_to(Neo, request.user, pk)
+        return self.remove_from(Neo, request.user, pk)
+
+    @action(
+        methods=['post', 'delete'],
+        detail=True,
+    )
+    def shopping_cart(self, request, pk):
+        if request.method == 'POST':
+            return self.add_to(ShoppingCart, request.user, pk)
+        return self.remove_from(ShoppingCart, request.user, pk)
+
+
+class NeoViewSet(viewsets.ModelViewSet):
+    queryset = Neo.objects.all()
+    serializer_class = NeoSerializer
+
+
+class ShoppingCartViewSet(viewsets.ModelViewSet):
+    queryset = Recipe.objects.all()
+    serializer_class = ShoppingCartSerializer
+
+
+class RecipeIngredientViewSet(viewsets.ModelViewSet):
+    queryset = RecipeIngredient.objects.all()
+    serializer_class = RecipeIngredientCreateSerializer
