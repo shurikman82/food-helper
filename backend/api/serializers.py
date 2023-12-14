@@ -29,8 +29,8 @@ class CustomUserCreateSerializer(UserCreateSerializer):
 class CustomUserSerializer(UserSerializer):
     is_subscribed = serializers.SerializerMethodField()
 
-    class Meta(UserSerializer.Meta):
-
+    class Meta:
+        model = User
         fields = ('id', 'email', 'username', 'first_name',
                   'last_name', 'is_subscribed')
 
@@ -155,6 +155,35 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
                 amount=ingredient['amount'],
             )
         return super().update(instance, validated_data)
+    
+    def validate_ingredients(self, data):
+        if not data:
+            raise serializers.ValidationError('Добавьте ингредиенты')
+        ingredients = []
+        for ingredient in data:
+            if ingredient['ingredient'] in ingredients:
+                raise serializers.ValidationError(
+                    'Ингредиенты должны быть уникальными'
+                )
+            ingredients.append(ingredient['ingredient'])
+        return data
+    
+    def validate_tags(self, data):
+        if not data:
+            raise serializers.ValidationError('Добавьте теги')
+        tags = []
+        for tag in data:
+            if tag in tags:
+                raise serializers.ValidationError(
+                    'Теги должны быть уникальными'
+                )
+            tags.append(tag)
+        return data
+    
+    def validate_cooking_time(self, data):
+        if data <= 0:
+            raise serializers.ValidationError('Время приготовления должно быть больше нуля')
+        return data
     
     def get_is_favorited(self, obj):
         request = self.context.get('request')

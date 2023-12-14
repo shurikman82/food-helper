@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
+from djoser.serializers import UserCreateSerializer
 from djoser.views import UserViewSet
 from rest_framework import permissions, serializers, status, viewsets
 from rest_framework.response import Response
@@ -14,6 +15,7 @@ from .serializers import (
 )
 
 from .pagination import CustomPagination
+from .permissions import ForRecipePermission, IsOnlyAuthor
 from recipes.models import Recipe, Tag, Ingredient, Neo, RecipeIngredient, ShoppingCart
 from users.models import Follow
 
@@ -22,9 +24,14 @@ User = get_user_model()
 
 
 class CustomUserViewSet(UserViewSet):
-    queryset = User.objects.all()
-    serializer_class = CustomUserSerializer
+    #queryset = User.objects.all()
     pagination_class = CustomPagination
+
+    def get_queryset(self):
+        limit = self.request.query_params.get('limit')
+        if limit:
+            return User.objects.all()[:int(limit)]
+        return User.objects.all()
 
     def get_serializer_class(self):
         if self.request.method in SAFE_METHODS:
@@ -52,9 +59,19 @@ class CustomUserViewSet(UserViewSet):
             Follow.objects.filter(user=user, author=author).delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @action(
+        methods=['get'],
+        detail=False,
+        permission_classes=[IsAuthenticated],
+        pagination_class=None,
+        url_path='me',
+    )
+    def me(self, requets):
+        return super().me(requets)
 
-
-#class CustomUserCreateViewSet(UserViewSet):
+        
+        
+   #class CustomUserCreateViewSet(UserViewSet):
 #    serializer_class = CustomUserCreateSerializer
  #   queryset = User.objects.all()
 
@@ -86,11 +103,13 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
+    pagination_class = None
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     pagination_class = CustomPagination
+    permission_classes = [ForRecipePermission]
 
     def get_serializer_class(self):
         if self.request.method in SAFE_METHODS:
@@ -144,6 +163,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if request.method == 'DELETE':
             user.shopping_cart.filter(recipe=recipe).delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
+        
+
 
 
 class NeoViewSet(viewsets.ModelViewSet):
