@@ -9,6 +9,7 @@ cryptography==41.0.5
 defusedxml==0.8.0rc2
 diff-match-patch==20230430
 Django==3.2.3
+django-filter==23.5
 django-import-export==3.3.3
 django-templated-mail==1.1.1
 djangorestframework==3.12.4
