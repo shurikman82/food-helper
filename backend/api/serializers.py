@@ -2,6 +2,7 @@ import re
 from django.contrib.auth import get_user_model
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from rest_framework import serializers
+from rest_framework.validators import UniqueTogetherValidator
 
 from .fields import Base64ImageField
 from users.models import Follow
@@ -21,9 +22,10 @@ class CustomUserCreateSerializer(UserCreateSerializer):
             raise serializers.ValidationError('Недопустимое имя')
         return username
 
-    class Meta(UserCreateSerializer.Meta):
-
-        fields = ('id', 'email', 'username', 'password', 'first_name', 'last_name')
+    class Meta:
+        model = User
+        fields = ('id', 'email', 'username', 'password',
+                  'first_name', 'last_name')
 
 
 class CustomUserSerializer(UserSerializer):
@@ -105,14 +107,13 @@ class RecipeSerializer(serializers.ModelSerializer):
     def get_is_favorited(self, obj):
         request = self.context.get('request')
         if request and not request.user.is_anonymous:
-            return obj.neo.filter(user=request.user).exists()
+            return Neo.objects.filter(user=request.user, recipe=obj).exists()
         return False
-
 
     def get_is_in_shopping_cart(self, obj):
         request = self.context.get('request')
         if request and not request.user.is_anonymous:
-            return obj.shopping_cart.filter(user=request.user).exists()
+            return ShoppingCart.objects.filter(user=request.user, recipe=obj).exists()
         return False
 
 
@@ -155,7 +156,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
                 amount=ingredient['amount'],
             )
         return super().update(instance, validated_data)
-    
+
     def validate_ingredients(self, data):
         if not data:
             raise serializers.ValidationError('Добавьте ингредиенты')
@@ -167,7 +168,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
                 )
             ingredients.append(ingredient['ingredient'])
         return data
-    
+
     def validate_tags(self, data):
         if not data:
             raise serializers.ValidationError('Добавьте теги')
@@ -179,22 +180,22 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
                 )
             tags.append(tag)
         return data
-    
+
     def validate_cooking_time(self, data):
         if data <= 0:
             raise serializers.ValidationError('Время приготовления должно быть больше нуля')
         return data
-    
+
     def get_is_favorited(self, obj):
         request = self.context.get('request')
         if request and not request.user.is_anonymous:
-            return obj.neo.filter(user=request.user).exists()
+            return Neo.objects.filter(user=request.user, recipe=obj).exists()
         return False
 
     def get_is_in_shopping_cart(self, obj):
         request = self.context.get('request')
         if request and not request.user.is_anonymous:
-            return obj.shopping_cart.filter(user=request.user).exists()
+            return ShoppingCart.objects.filter(user=request.user, recipe=obj).exists()
         return False
 
     def to_representation(self, instance):
@@ -214,7 +215,8 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
 
 
 
-class FollowSerializer(serializers.ModelSerializer):
+
+class FollowSerializer(CustomUserSerializer):
     is_subscribed = serializers.SerializerMethodField()
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
@@ -236,28 +238,37 @@ class FollowSerializer(serializers.ModelSerializer):
         return False
     
     def get_recipes(self, obj):
+        recipes_queryset = Recipe.objects.filter(author=obj)
         request = self.context.get('request')
         if request and not request.user.is_anonymous:
-            queryset = obj.recipes.all()[:3]
-            return RecipeSerializer(queryset, many=True).data
-        return None
-    
+            if 'recipes_limit' in request.GET:
+                recipes_limit = request.GET.get('recipes_limit')
+                if recipes_limit:
+                    recipes_queryset = recipes_queryset[:int(recipes_limit)]
+
+        return RecipeShortSerializer(
+            recipes_queryset,
+            context={'request': request},
+            many=True,
+        ).data
+
     def get_recipes_count(self, obj):
         return obj.recipes.count()
-
-
-class FollowCreateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Follow
-        fields = ('user', 'author')
-
+    
     def validate(self, data):
         if data['user'] == data['author']:
             raise serializers.ValidationError(
                 'Нельзя подписаться на себя'
             )
         return data
+    
+    
 
+
+class RecipeShortSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Recipe
+        fields = ('id', 'name', 'image', 'cooking_time')
 
 class NeoSerializer(serializers.ModelSerializer):
     class Meta:

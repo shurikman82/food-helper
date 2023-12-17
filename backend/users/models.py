@@ -27,7 +27,6 @@ class CustomUser(AbstractUser):
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
         ordering = ('username',)
-        
 
     def __str__(self):
         return self.username
@@ -51,12 +50,12 @@ class Follow(models.Model):
         verbose_name = 'Подписка'
         verbose_name_plural = 'Подписки'
         ordering = ('author_id',)
-        constraints = [
-            models.UniqueConstraint(
-                fields=['user', 'author'],
-                name='unique_follow',
-            ),
-        ]
+        #constraints = [
+        #    models.UniqueConstraint(
+        #        fields=['user', 'author'],
+        #        name='unique_follow',
+        #    ),
+        #]
 
     def __str__(self):
         return f'{self.user} подписан на {self.author}'
