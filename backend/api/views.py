@@ -100,7 +100,7 @@ class CustomUserViewSet(UserViewSet):
 
 class FollowViewSet(viewsets.ModelViewSet):
     queryset = Follow.objects.all()
-    permission_classes = [IsAuthenticated,]
+    permission_classes = [IsAuthenticated]
     serializer_class = FollowSerializer
 
     def get_queryset(self):
@@ -213,9 +213,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
         pdf.setFont('ArialRegular', 16)
         ingredients_list = RecipeIngredient.objects.filter(
             recipe__shopping_cart__user=request.user
-            ).values(
-                'ingredient__name', 'ingredient__measurement_unit',
-            ).annotate(amount=Sum('amount'))
+        ).values(
+            'ingredient__name', 'ingredient__measurement_unit',
+        ).annotate(amount=Sum('amount'))
         if ingredients_list:
             pdf.drawString(200, 800, text='Что купить:')
             y_position = 780
