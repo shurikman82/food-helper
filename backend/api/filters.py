@@ -22,13 +22,17 @@ class RecipeFilter(filters.FilterSet):
     )
 
     def get_is_favorited(self, queryset, name, value):
-        if value:
-            return queryset.filter(is_favorited=True)
+        user = self.request.user
+        if user.is_authenticated:
+            if value:
+                return queryset.filter(neo__user=user)
         return queryset
 
     def get_is_in_shopping_cart(self, queryset, name, value):
-        if value:
-            return queryset.filter(is_in_shopping_cart=True)
+        user = self.request.user
+        if user.is_authenticated:
+            if value:
+                return queryset.filter(shopping_cart__user=user)
         return queryset
 
     class Meta:

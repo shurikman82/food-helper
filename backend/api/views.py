@@ -92,7 +92,7 @@ class CustomUserViewSet(UserViewSet):
         authors = [item.author.id for item in subscriptions_queryset]
         users_queryset = User.objects.filter(pk__in=authors)
         paginated_queryset = self.paginate_queryset(users_queryset)
-        serializer = FollowSerializer(paginated_queryset, many=True)
+        serializer = FollowSerializer(paginated_queryset, many=True, context={'request': request})
         return self.get_paginated_response(serializer.data)
         
         
@@ -162,21 +162,27 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated],
     )
     def favorite(self, request, pk):
-        user = request.user
-        
-        if not Recipe.objects.filter(id=pk).exists():
-            return Response({'errors': 'Рецепт не найден'},
-                            status=status.HTTP_400_BAD_REQUEST)
-        recipe = Recipe.objects.get(id=pk)
-        if user.neo.filter(recipe=recipe).exists():
-            return Response({'errors': 'Рецепт уже в избранном'},
-                            status=status.HTTP_400_BAD_REQUEST)
+        user = self.request.user
         if request.method == 'POST':
+            if not Recipe.objects.filter(id=pk).exists():
+                return Response({'errors': 'Рецепт не найден'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            recipe = Recipe.objects.get(id=pk)
+            if user.neo.filter(recipe=recipe).exists():
+                return Response({'errors': 'Рецепт уже в избранном'},
+                                status=status.HTTP_400_BAD_REQUEST)
             Neo.objects.create(user=user, recipe=recipe)
             serializer = RecipeShortSerializer(recipe, context={'request': request})
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         if request.method == 'DELETE':
-            user.neo.filter(recipe=recipe).delete()
+            if not Recipe.objects.filter(id=pk).exists():
+                return Response({'errors': 'Рецепт не найден'},
+                                status=status.HTTP_404_NOT_FOUND)
+            recipe = Recipe.objects.get(id=pk)
+            if not Neo.objects.filter(recipe=recipe, user=user).exists():
+                return Response({'errors': 'Рецепта для удаления нет'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            Neo.objects.filter(recipe=recipe, user=user).delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
@@ -186,25 +192,26 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     def shopping_cart(self, request, pk):
         user = self.request.user
-        
-        if not Recipe.objects.filter(id=pk).exists():
-            return Response({'errors': 'Рецепт не найден'},
-                            status=status.HTTP_400_BAD_REQUEST)
-        recipe = Recipe.objects.get(id=pk)
-        if user.shopping_cart.filter(recipe=recipe).exists():
-            return Response({'errors': 'Рецепт уже в списке покупок'},
-                            status=status.HTTP_400_BAD_REQUEST)
         if request.method == 'POST':
+            if not Recipe.objects.filter(id=pk).exists():
+                return Response({'errors': 'Нет рецепта для добавления'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            recipe = Recipe.objects.get(id=pk)
+            if user.shopping_cart.filter(recipe=recipe).exists():
+                return Response({'errors': 'Рецепт уже в списке покупок'},
+                                status=status.HTTP_400_BAD_REQUEST)
             ShoppingCart.objects.create(user=user, recipe=recipe)
             serializer = RecipeShortSerializer(recipe, context={'request': request})
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         if request.method == 'DELETE':
-            try:
-                user.shopping_cart.get(recipe=recipe).delete()
-            except ShoppingCart.DoesNotExist:
-                return Response({'errors': 'Рецепта нет в списке покупок'},
+            if not Recipe.objects.filter(id=pk).exists():
+                return Response({'errors': 'Рецепт не найден'},
                                 status=status.HTTP_404_NOT_FOUND)
-            user.shopping_cart.filter(recipe=recipe).delete()
+            recipe = Recipe.objects.get(id=pk)
+            if not ShoppingCart.objects.filter(recipe=recipe, user=user).exists():
+                return Response({'errors': 'Такого рецепта в корзине нет'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            ShoppingCart.objects.filter(recipe=recipe, user=user).delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         
     @action(

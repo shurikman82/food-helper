@@ -110,10 +110,10 @@ class RecipeSerializer(serializers.ModelSerializer):
             return Neo.objects.filter(user=request.user, recipe=obj).exists()
         return False
 
-    def get_is_in_shopping_cart(self, obj):
+    def get_is_in_shopping_cart(self, instance):
         request = self.context.get('request')
         if request and not request.user.is_anonymous:
-            return ShoppingCart.objects.filter(user=request.user, recipe=obj).exists()
+            return instance.shopping_cart.filter(user=request.user).exists()
         return False
 
 
