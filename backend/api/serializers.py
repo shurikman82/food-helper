@@ -7,7 +7,7 @@ from recipes.models import (Ingredient, Neo, Recipe, RecipeIngredient,
 from rest_framework import serializers
 from users.models import Follow
 
-from .fields import Base64ImageField
+from .fields import Base64ImageField, Hex2NameColor
 
 User = get_user_model()
 
@@ -45,6 +45,7 @@ class CustomUserSerializer(UserSerializer):
 
 
 class TagSerializer(serializers.ModelSerializer):
+    color = Hex2NameColor()
 
     class Meta:
         model = Tag
