@@ -1,34 +1,31 @@
 from io import BytesIO
-import os
+
 from django.contrib.auth import get_user_model
 from django.db.models.aggregates import Sum
-from django.http import HttpResponse, FileResponse
+from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from djoser.serializers import UserCreateSerializer
 from djoser.views import UserViewSet
-from rest_framework import permissions, serializers, status, viewsets
-from rest_framework.response import Response
+from recipes.models import (Ingredient, Neo, Recipe, RecipeIngredient,
+                            ShoppingCart, Tag)
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfgen import canvas
+from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
 from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
-
-from reportlab.pdfgen import canvas
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-
-from .serializers import (
-    CustomUserSerializer,
-    FollowSerializer, NeoSerializer, ShoppingCartSerializer,
-    CustomUserCreateSerializer, IngredientSerializer, RecipeIngredientCreateSerializer, RecipeCreateSerializer,
-    RecipeSerializer, RecipeShortSerializer, TagSerializer,
-)
-from .filters import IngredientFilter, RecipeFilter
-from .pagination import CustomPagination
-from .permissions import ForRecipePermission, IsOnlyAuthor
-from recipes.models import Recipe, Tag, Ingredient, Neo, RecipeIngredient, ShoppingCart
+from rest_framework.response import Response
 from users.models import Follow
 
+from .filters import IngredientFilter, RecipeFilter
+from .pagination import CustomPagination
+from .permissions import ForRecipePermission
+from .serializers import (FollowSerializer, IngredientSerializer,
+                          NeoSerializer, RecipeCreateSerializer,
+                          RecipeIngredientCreateSerializer, RecipeSerializer,
+                          RecipeShortSerializer, ShoppingCartSerializer,
+                          TagSerializer)
 
 User = get_user_model()
 
@@ -39,22 +36,13 @@ class CustomUserViewSet(UserViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter]
     search_fields = ['username']
 
-#    def get_queryset(self):
-#        limit = self.request.query_params.get('limit')
-#       if limit:
-#            return User.objects.all()[:int(limit)]
-#       return User.objects.all()
-
-#    def get_serializer_class(self):
-#        if self.request.method in SAFE_METHODS:
-#            return CustomUserSerializer
-#        return CustomUserCreateSerializer
-    
     def validate_username(self, value):
         if User.objects.filter(username=value).exists():
-            raise serializers.ValidationError('Пользователь с таким никнеймом уже существует')
+            raise serializers.ValidationError(
+                'Пользователь с таким никнеймом уже существует'
+            )
         return value
-    
+
     @action(
         methods=['delete', 'post'],
         detail=True,
@@ -68,18 +56,20 @@ class CustomUserViewSet(UserViewSet):
                 return Response({'errors': 'Нельзя подписаться на себя'},
                                 status=status.HTTP_400_BAD_REQUEST)
             if Follow.objects.filter(user=user, author=author).exists():
-                return Response({'errors': 'Вы уже подписаны на этого пользователя'},
+                return Response({'errors':
+                                'Вы уже подписаны на этого пользователя'},
                                 status=status.HTTP_400_BAD_REQUEST)
             Follow.objects.create(user=user, author=author)
             serializer = FollowSerializer(author, context={'request': request})
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         if request.method == 'DELETE':
             if not Follow.objects.filter(user=user, author=author).exists():
-                return Response({'errors': 'Вы не подписаны на этого пользователя'},
+                return Response({'errors':
+                                'Вы не подписаны на этого пользователя'},
                                 status=status.HTTP_400_BAD_REQUEST)
             Follow.objects.filter(user=user, author=author).delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
-        
+
     @action(
         methods=['get'],
         detail=False,
@@ -92,10 +82,11 @@ class CustomUserViewSet(UserViewSet):
         authors = [item.author.id for item in subscriptions_queryset]
         users_queryset = User.objects.filter(pk__in=authors)
         paginated_queryset = self.paginate_queryset(users_queryset)
-        serializer = FollowSerializer(paginated_queryset, many=True, context={'request': request})
+        serializer = FollowSerializer(
+            paginated_queryset, many=True, context={'request': request},
+        )
         return self.get_paginated_response(serializer.data)
-        
-        
+
     @action(
         methods=['get'],
         detail=False,
@@ -105,15 +96,6 @@ class CustomUserViewSet(UserViewSet):
     )
     def me(self, request, *args, **kwargs):
         return super().me(request, *args, **kwargs)
-    
-   #class CustomUserCreateViewSet(UserViewSet):
-#    serializer_class = CustomUserCreateSerializer
- #   queryset = User.objects.all()
-
- #   def validate_username(self, value):
- #       if User.objects.filter(username=value).exists():
- #           raise serializers.ValidationError('Пользователь с таким никнеймом уже существует')
-  #      return value
 
 
 class FollowViewSet(viewsets.ModelViewSet):
@@ -121,11 +103,9 @@ class FollowViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated,]
     serializer_class = FollowSerializer
 
-    
-    
     def get_queryset(self):
         return Follow.objects.filter(user=self.request.user)
-    
+
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Tag.objects.all()
@@ -172,7 +152,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 return Response({'errors': 'Рецепт уже в избранном'},
                                 status=status.HTTP_400_BAD_REQUEST)
             Neo.objects.create(user=user, recipe=recipe)
-            serializer = RecipeShortSerializer(recipe, context={'request': request})
+            serializer = RecipeShortSerializer(
+                recipe, context={'request': request},
+            )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         if request.method == 'DELETE':
             if not Recipe.objects.filter(id=pk).exists():
@@ -201,19 +183,23 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 return Response({'errors': 'Рецепт уже в списке покупок'},
                                 status=status.HTTP_400_BAD_REQUEST)
             ShoppingCart.objects.create(user=user, recipe=recipe)
-            serializer = RecipeShortSerializer(recipe, context={'request': request})
+            serializer = RecipeShortSerializer(
+                recipe, context={'request': request},
+            )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         if request.method == 'DELETE':
             if not Recipe.objects.filter(id=pk).exists():
                 return Response({'errors': 'Рецепт не найден'},
                                 status=status.HTTP_404_NOT_FOUND)
             recipe = Recipe.objects.get(id=pk)
-            if not ShoppingCart.objects.filter(recipe=recipe, user=user).exists():
+            if not ShoppingCart.objects.filter(
+                recipe=recipe, user=user
+            ).exists():
                 return Response({'errors': 'Такого рецепта в корзине нет'},
                                 status=status.HTTP_400_BAD_REQUEST)
             ShoppingCart.objects.filter(recipe=recipe, user=user).delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
-        
+
     @action(
         methods=['get'],
         detail=False,
@@ -252,9 +238,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
         response = FileResponse(
             buffer, as_attachment=False, filename='shopping_cart.pdf')
         return response
-        
-        
-
 
 
 class NeoViewSet(viewsets.ModelViewSet):

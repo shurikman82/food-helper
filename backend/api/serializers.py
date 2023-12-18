@@ -1,15 +1,13 @@
 import re
+
 from django.contrib.auth import get_user_model
 from djoser.serializers import UserCreateSerializer, UserSerializer
+from recipes.models import (Ingredient, Neo, Recipe, RecipeIngredient,
+                            ShoppingCart, Tag)
 from rest_framework import serializers
-from rest_framework.validators import UniqueTogetherValidator
+from users.models import Follow
 
 from .fields import Base64ImageField
-from users.models import Follow
-from recipes.models import (
-    Ingredient, Neo, Recipe,
-    RecipeIngredient, ShoppingCart, Tag
-)
 
 User = get_user_model()
 
@@ -44,8 +42,6 @@ class CustomUserSerializer(UserSerializer):
                 author=obj
             ).exists()
         return False
-
-
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -183,7 +179,9 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
 
     def validate_cooking_time(self, data):
         if data <= 0:
-            raise serializers.ValidationError('Время приготовления должно быть больше нуля')
+            raise serializers.ValidationError(
+                'Время приготовления должно быть больше нуля'
+            )
         return data
 
     def get_is_favorited(self, obj):
@@ -195,7 +193,9 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
     def get_is_in_shopping_cart(self, obj):
         request = self.context.get('request')
         if request and not request.user.is_anonymous:
-            return ShoppingCart.objects.filter(user=request.user, recipe=obj).exists()
+            return ShoppingCart.objects.filter(
+                user=request.user, recipe=obj
+            ).exists()
         return False
 
     def to_representation(self, instance):
@@ -211,9 +211,6 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             'name', 'text', 'cooking_time', 'is_favorited',
             'is_in_shopping_cart',
         )
-
-
-
 
 
 class FollowSerializer(CustomUserSerializer):
@@ -236,7 +233,7 @@ class FollowSerializer(CustomUserSerializer):
                 author=obj
             ).exists()
         return False
-    
+
     def get_recipes(self, obj):
         recipes_queryset = Recipe.objects.filter(author=obj)
         request = self.context.get('request')
@@ -254,21 +251,20 @@ class FollowSerializer(CustomUserSerializer):
 
     def get_recipes_count(self, obj):
         return obj.recipes.count()
-    
+
     def validate(self, data):
         if data['user'] == data['author']:
             raise serializers.ValidationError(
                 'Нельзя подписаться на себя'
             )
         return data
-    
-    
 
 
 class RecipeShortSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recipe
         fields = ('id', 'name', 'image', 'cooking_time')
+
 
 class NeoSerializer(serializers.ModelSerializer):
     class Meta:

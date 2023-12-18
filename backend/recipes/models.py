@@ -6,6 +6,7 @@ User = get_user_model()
 
 
 class Recipe(models.Model):
+    '''Модель рецепта.'''
     name = models.CharField(max_length=200, verbose_name='Название рецепта')
     image = models.ImageField(upload_to='recipes/images',
                               verbose_name='Фотография рецепта')
@@ -31,7 +32,6 @@ class Recipe(models.Model):
         through='RecipeIngredient', verbose_name='Ингредиенты рецепта',
     )
 
-
     class Meta:
         ordering = ('-pub_date',)
         verbose_name = 'Рецепт'
@@ -42,6 +42,7 @@ class Recipe(models.Model):
 
 
 class Tag(models.Model):
+    '''Модель тега.'''
     name = models.CharField(max_length=200, unique=True,
                             verbose_name='Название тега')
     color = models.CharField(max_length=7, unique=True,
@@ -58,6 +59,7 @@ class Tag(models.Model):
 
 
 class Ingredient(models.Model):
+    '''Модель ингредиента.'''
     name = models.CharField(max_length=200,
                             verbose_name='Название ингредиента')
     measurement_unit = models.CharField(max_length=200,
@@ -72,6 +74,7 @@ class Ingredient(models.Model):
 
 
 class RecipeIngredient(models.Model):
+    '''Модель ингредиета в конкретном рецепте.'''
     recipe = models.ForeignKey(
         Recipe, on_delete=models.CASCADE,
         related_name='recipe_ingredients',
@@ -102,6 +105,10 @@ class RecipeIngredient(models.Model):
 
 
 class Neo(models.Model):
+    '''
+    Модель избранных рецептов.
+    И не говорите, что Нео - не избранный.
+    '''
     user = models.ForeignKey(
         User, on_delete=models.CASCADE,
         related_name='neo', verbose_name='Пользователь'
@@ -132,6 +139,7 @@ class Neo(models.Model):
 
 
 class ShoppingCart(models.Model):
+    '''Модель корзины покупок.'''
     user = models.ForeignKey(
         User, on_delete=models.CASCADE,
         related_name='shopping_cart', verbose_name='Пользователь'

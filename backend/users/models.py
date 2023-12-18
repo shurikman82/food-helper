@@ -1,5 +1,5 @@
-from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.db import models
 
 
 class CustomUser(AbstractUser):
@@ -33,6 +33,7 @@ class CustomUser(AbstractUser):
 
 
 class Follow(models.Model):
+    '''Модель для подписок.'''
     user = models.ForeignKey(
         CustomUser,
         on_delete=models.CASCADE,
@@ -50,12 +51,6 @@ class Follow(models.Model):
         verbose_name = 'Подписка'
         verbose_name_plural = 'Подписки'
         ordering = ('author_id',)
-        #constraints = [
-        #    models.UniqueConstraint(
-        #        fields=['user', 'author'],
-        #        name='unique_follow',
-        #    ),
-        #]
 
     def __str__(self):
         return f'{self.user} подписан на {self.author}'
