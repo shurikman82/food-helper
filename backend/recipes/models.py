@@ -104,18 +104,17 @@ class RecipeIngredient(models.Model):
         return f'{self.recipe.name} : {self.ingredient.name} {self.amount}'
 
 
-class Neo(models.Model):
+class Favorite(models.Model):
     '''
     Модель избранных рецептов.
-    И не говорите, что Нео - не избранный.
     '''
     user = models.ForeignKey(
         User, on_delete=models.CASCADE,
-        related_name='neo', verbose_name='Пользователь'
+        related_name='favorite', verbose_name='Пользователь'
     )
     recipe = models.ForeignKey(
         Recipe, on_delete=models.CASCADE,
-        related_name='neo', verbose_name='Рецепт'
+        related_name='favorite', verbose_name='Рецепт'
     )
     pub_date = models.DateTimeField(
         auto_now_add=True,

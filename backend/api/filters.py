@@ -1,4 +1,5 @@
 from django_filters import CharFilter, NumberFilter, rest_framework as filters
+
 from recipes.models import Ingredient, Recipe
 
 
@@ -23,16 +24,14 @@ class RecipeFilter(filters.FilterSet):
 
     def get_is_favorited(self, queryset, name, value):
         user = self.request.user
-        if user.is_authenticated:
-            if value:
-                return queryset.filter(neo__user=user)
+        if user.is_authenticated and value:
+            return queryset.filter(favorite__user=user)
         return queryset
 
     def get_is_in_shopping_cart(self, queryset, name, value):
         user = self.request.user
-        if user.is_authenticated:
-            if value:
-                return queryset.filter(shopping_cart__user=user)
+        if user.is_authenticated and value:
+            return queryset.filter(shopping_cart__user=user)
         return queryset
 
     class Meta:

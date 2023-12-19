@@ -16,10 +16,10 @@ class CustomUser(AbstractUser):
                                   verbose_name='Имя пользователя')
     last_name = models.CharField(max_length=150,
                                  verbose_name='Фамилия пользователя')
-    is_subscribed = models.BooleanField(
-        default=False,
-        verbose_name='Подписан ли текущий пользователь на этого',
-    )
+    #is_subscribed = models.BooleanField(
+    #    default=False,
+    #    verbose_name='Подписан ли текущий пользователь на этого',
+    #)
     password = models.CharField(max_length=150,
                                 verbose_name='Пароль')
 
@@ -51,6 +51,12 @@ class Follow(models.Model):
         verbose_name = 'Подписка'
         verbose_name_plural = 'Подписки'
         ordering = ('author_id',)
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'author'],
+                name='unique_user_author',
+            )
+        ]
 
     def __str__(self):
         return f'{self.user} подписан на {self.author}'

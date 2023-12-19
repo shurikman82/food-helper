@@ -1,8 +1,9 @@
 import re
 
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from djoser.serializers import UserCreateSerializer, UserSerializer
-from recipes.models import (Ingredient, Neo, Recipe, RecipeIngredient,
+from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
                             ShoppingCart, Tag)
 from rest_framework import serializers
 from users.models import Follow
@@ -13,17 +14,18 @@ User = get_user_model()
 
 
 class CustomUserCreateSerializer(UserCreateSerializer):
+
+    class Meta:
+        model = User
+        fields = ('id', 'email', 'username', 'password',
+                  'first_name', 'last_name')
+
     def validate_username(self, username):
         if not re.match(r'^[\w.@+-]+$', username):
             raise serializers.ValidationError('Недопустимые символы')
         if username.lower() == 'me':
             raise serializers.ValidationError('Недопустимое имя')
         return username
-
-    class Meta:
-        model = User
-        fields = ('id', 'email', 'username', 'password',
-                  'first_name', 'last_name')
 
 
 class CustomUserSerializer(UserSerializer):
@@ -104,7 +106,7 @@ class RecipeSerializer(serializers.ModelSerializer):
     def get_is_favorited(self, obj):
         request = self.context.get('request')
         if request and not request.user.is_anonymous:
-            return Neo.objects.filter(user=request.user, recipe=obj).exists()
+            return Favorite.objects.filter(user=request.user, recipe=obj).exists()
         return False
 
     def get_is_in_shopping_cart(self, instance):
@@ -124,34 +126,41 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
 
+    def ingredients_data(self, ingredients, recipe):
+        self.ingredients_data = [
+            RecipeIngredient.objects.create(
+                recipe=recipe,
+                ingredient_id=ingredient.get('id'),
+                amount=ingredient.get('amount'),
+            )
+            for ingredient in ingredients
+        ]
+        RecipeIngredient.objects.bulk_create(self.ingredients_data)
+
     def create(self, validated_data):
         ingredients = validated_data.pop('ingredients')
         tags = validated_data.pop('tags')
         recipe = Recipe.objects.create(**validated_data)
         recipe.tags.set(tags)
-        for ingredient in ingredients:
-            RecipeIngredient.objects.create(
-                recipe=recipe,
-                ingredient=ingredient.get('ingredient'),
-                amount=ingredient.get('amount'),
-            )
+        #for ingredient in ingredients:
+        #    RecipeIngredient.objects.create(
+        #        recipe=recipe,
+        #        ingredient=ingredient.get('ingredient'),
+        #        amount=ingredient.get('amount'),
+        #    )
+        self.ingredients_data(ingredients, recipe)
         return recipe
 
     def update(self, instance, validated_data):
         ingredients = validated_data.pop('ingredients', None)
         tags = validated_data.pop('tags', None)
-        if ingredients is None or tags is None:
-            raise serializers.ValidationError(
-                "Поля ингредиентов не должны быть пустыми."
-            )
+        #if ingredients is None or tags is None:
+        #    raise serializers.ValidationError(
+        #        "Поля ингредиентов не должны быть пустыми."
+        #    )
         instance.tags.set(tags)
         instance.ingredients.clear()
-        for ingredient in ingredients:
-            RecipeIngredient.objects.update_or_create(
-                recipe=instance,
-                ingredient=ingredient['ingredient'],
-                amount=ingredient['amount'],
-            )
+        self.ingredients_data(ingredients, instance)
         return super().update(instance, validated_data)
 
     def validate_ingredients(self, data):
@@ -188,14 +197,14 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
     def get_is_favorited(self, obj):
         request = self.context.get('request')
         if request and not request.user.is_anonymous:
-            return Neo.objects.filter(user=request.user, recipe=obj).exists()
+            return Favorite.objects.filter(user=request.user, recipe=obj).exists()
         return False
 
     def get_is_in_shopping_cart(self, obj):
         request = self.context.get('request')
         if request and not request.user.is_anonymous:
             return ShoppingCart.objects.filter(
-                user=request.user, recipe=obj
+               user=request.user, recipe=obj
             ).exists()
         return False
 
@@ -267,9 +276,15 @@ class RecipeShortSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'image', 'cooking_time')
 
 
-class NeoSerializer(serializers.ModelSerializer):
+class FavoriteSerializer(serializers.ModelSerializer):
+    user = serializers.SlugRelatedField(
+        read_only=True,
+        slug_field='username',
+        default=serializers.CurrentUserDefault(),
+    )
+
     class Meta:
-        model = Neo
+        model = Favorite
         fields = ('user', 'recipe')
 
 

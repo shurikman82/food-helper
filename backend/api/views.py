@@ -6,7 +6,7 @@ from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
-from recipes.models import (Ingredient, Neo, Recipe, RecipeIngredient,
+from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
                             ShoppingCart, Tag)
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
@@ -21,8 +21,8 @@ from users.models import Follow
 from .filters import IngredientFilter, RecipeFilter
 from .pagination import CustomPagination
 from .permissions import ForRecipePermission
-from .serializers import (FollowSerializer, IngredientSerializer,
-                          NeoSerializer, RecipeCreateSerializer,
+from .serializers import (FavoriteSerializer, FollowSerializer,
+                          IngredientSerializer, RecipeCreateSerializer,
                           RecipeIngredientCreateSerializer, RecipeSerializer,
                           RecipeShortSerializer, ShoppingCartSerializer,
                           TagSerializer)
@@ -148,10 +148,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 return Response({'errors': 'Рецепт не найден'},
                                 status=status.HTTP_400_BAD_REQUEST)
             recipe = Recipe.objects.get(id=pk)
-            if user.neo.filter(recipe=recipe).exists():
+            if user.favorite.filter(recipe=recipe).exists():
                 return Response({'errors': 'Рецепт уже в избранном'},
                                 status=status.HTTP_400_BAD_REQUEST)
-            Neo.objects.create(user=user, recipe=recipe)
+            Favorite.objects.create(user=user, recipe=recipe)
             serializer = RecipeShortSerializer(
                 recipe, context={'request': request},
             )
@@ -161,10 +161,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 return Response({'errors': 'Рецепт не найден'},
                                 status=status.HTTP_404_NOT_FOUND)
             recipe = Recipe.objects.get(id=pk)
-            if not Neo.objects.filter(recipe=recipe, user=user).exists():
+            if not Favorite.objects.filter(recipe=recipe, user=user).exists():
                 return Response({'errors': 'Рецепта для удаления нет'},
                                 status=status.HTTP_400_BAD_REQUEST)
-            Neo.objects.filter(recipe=recipe, user=user).delete()
+            Favorite.objects.filter(recipe=recipe, user=user).delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
@@ -240,9 +240,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return response
 
 
-class NeoViewSet(viewsets.ModelViewSet):
-    queryset = Neo.objects.all()
-    serializer_class = NeoSerializer
+class FavoriteViewSet(viewsets.ModelViewSet):
+    queryset = Favorite.objects.all()
+    serializer_class = FavoriteSerializer
 
 
 class ShoppingCartViewSet(viewsets.ModelViewSet):
