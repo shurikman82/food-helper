@@ -1,4 +1,4 @@
-from django_filters import rest_framework as filters, CharFilter, NumberFilter
+from django_filters import CharFilter, NumberFilter, rest_framework as filters
 from recipes.models import Ingredient, Recipe
 
 
