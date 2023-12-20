@@ -19,6 +19,7 @@ from rest_framework.response import Response
 from users.models import Follow
 
 from .filters import IngredientFilter, RecipeFilter
+from .mixins import FavoriteAndShoppingCartActionsMixin
 from .pagination import CustomPagination
 from .permissions import ForRecipePermission
 from .serializers import (FavoriteSerializer, FollowSerializer,
@@ -120,7 +121,8 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     filterset_class = IngredientFilter
 
 
-class RecipeViewSet(viewsets.ModelViewSet):
+class RecipeViewSet(viewsets.ModelViewSet,
+                    FavoriteAndShoppingCartActionsMixin):
     queryset = Recipe.objects.all()
     pagination_class = CustomPagination
     permission_classes = [ForRecipePermission]
@@ -140,62 +142,20 @@ class RecipeViewSet(viewsets.ModelViewSet):
         detail=True,
         permission_classes=[IsAuthenticated],
     )
-    def favorite(self, request, pk):
-        user = self.request.user
-        if request.method == 'POST':
-            if not Recipe.objects.filter(id=pk).exists():
-                return Response({'errors': 'Рецепт не найден'},
-                                status=status.HTTP_400_BAD_REQUEST)
-            recipe = Recipe.objects.get(id=pk)
-            if user.favorite.filter(recipe=recipe).exists():
-                return Response({'errors': 'Рецепт уже в избранном'},
-                                status=status.HTTP_400_BAD_REQUEST)
-            Favorite.objects.create(user=user, recipe=recipe)
-            serializer = RecipeShortSerializer(
-                recipe, context={'request': request},
-            )
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        if not Recipe.objects.filter(id=pk).exists():
-            return Response({'errors': 'Рецепт не найден'},
-                            status=status.HTTP_404_NOT_FOUND)
-        recipe = Recipe.objects.get(id=pk)
-        if not Favorite.objects.filter(recipe=recipe, user=user).exists():
-            return Response({'errors': 'Рецепта для удаления нет'},
-                            status=status.HTTP_400_BAD_REQUEST)
-        Favorite.objects.filter(recipe=recipe, user=user).delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+    def favorite(self, request, pk, model=Favorite):
+        return self.favorite_and_shopping_cart_actions(
+            request, pk, model
+        )
 
     @action(
         methods=['post', 'delete'],
         detail=True,
         permission_classes=[IsAuthenticated],
     )
-    def shopping_cart(self, request, pk):
-        user = self.request.user
-        if request.method == 'POST':
-            if not Recipe.objects.filter(id=pk).exists():
-                return Response({'errors': 'Нет рецепта для добавления'},
-                                status=status.HTTP_400_BAD_REQUEST)
-            recipe = Recipe.objects.get(id=pk)
-            if user.shopping_cart.filter(recipe=recipe).exists():
-                return Response({'errors': 'Рецепт уже в списке покупок'},
-                                status=status.HTTP_400_BAD_REQUEST)
-            ShoppingCart.objects.create(user=user, recipe=recipe)
-            serializer = RecipeShortSerializer(
-                recipe, context={'request': request},
-            )
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        if not Recipe.objects.filter(id=pk).exists():
-            return Response({'errors': 'Рецепт не найден'},
-                            status=status.HTTP_404_NOT_FOUND)
-        recipe = Recipe.objects.get(id=pk)
-        if not ShoppingCart.objects.filter(
-            recipe=recipe, user=user
-        ).exists():
-            return Response({'errors': 'Такого рецепта в корзине нет'},
-                            status=status.HTTP_400_BAD_REQUEST)
-        ShoppingCart.objects.filter(recipe=recipe, user=user).delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+    def shopping_cart(self, request, pk, model=ShoppingCart):
+        return self.favorite_and_shopping_cart_actions(
+            request, pk, model
+        )
 
     @action(
         methods=['get'],
