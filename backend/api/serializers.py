@@ -167,11 +167,11 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Добавьте ингредиенты')
         ingredients = []
         for ingredient in data:
-            if ingredient['ingredient'] in ingredients:
+            if ingredient['ingredient'].id in ingredients:
                 raise serializers.ValidationError(
                     'Ингредиенты должны быть уникальными'
                 )
-            ingredients.append(ingredient['ingredient'])
+            ingredients.append(ingredient['ingredient'].id)
         return data
 
     def validate_tags(self, data):
@@ -223,7 +223,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
 
 
 class FollowSerializer(CustomUserSerializer):
-    is_subscribed = serializers.SerializerMethodField()
+    #is_subscribed = serializers.SerializerMethodField()
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
 
@@ -234,14 +234,14 @@ class FollowSerializer(CustomUserSerializer):
             'is_subscribed', 'recipes', 'recipes_count'
         )
 
-    def get_is_subscribed(self, obj):
-        request = self.context.get('request')
-        if request and not request.user.is_anonymous:
-            return Follow.objects.filter(
-                user=request.user,
-                author=obj
-            ).exists()
-        return False
+    #def get_is_subscribed(self, obj):
+    #    request = self.context.get('request')
+    #    if request and not request.user.is_anonymous:
+    #        return Follow.objects.filter(
+    #            user=request.user,
+    #            author=obj
+    #        ).exists()
+    #    return False
 
     def get_recipes(self, obj):
         recipes_queryset = Recipe.objects.filter(author=obj)

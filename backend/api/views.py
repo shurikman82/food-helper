@@ -36,12 +36,12 @@ class CustomUserViewSet(UserViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter]
     search_fields = ['username']
 
-    def validate_username(self, value):
-        if User.objects.filter(username=value).exists():
-            raise serializers.ValidationError(
-                'Пользователь с таким никнеймом уже существует'
-            )
-        return value
+    #def validate_username(self, value):
+    #    if User.objects.filter(username=value).exists():
+    #        raise serializers.ValidationError(
+    #            'Пользователь с таким никнеймом уже существует'
+    #        )
+    #    return value
 
     @action(
         methods=['delete', 'post'],
@@ -62,13 +62,12 @@ class CustomUserViewSet(UserViewSet):
             Follow.objects.create(user=user, author=author)
             serializer = FollowSerializer(author, context={'request': request})
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        if request.method == 'DELETE':
-            if not Follow.objects.filter(user=user, author=author).exists():
-                return Response({'errors':
-                                'Вы не подписаны на этого пользователя'},
-                                status=status.HTTP_400_BAD_REQUEST)
-            Follow.objects.filter(user=user, author=author).delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+        if not Follow.objects.filter(user=user, author=author).exists():
+            return Response({'errors':
+                            'Вы не подписаны на этого пользователя'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        Follow.objects.filter(user=user, author=author).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
         methods=['get'],
@@ -156,16 +155,15 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 recipe, context={'request': request},
             )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        if request.method == 'DELETE':
-            if not Recipe.objects.filter(id=pk).exists():
-                return Response({'errors': 'Рецепт не найден'},
-                                status=status.HTTP_404_NOT_FOUND)
-            recipe = Recipe.objects.get(id=pk)
-            if not Favorite.objects.filter(recipe=recipe, user=user).exists():
-                return Response({'errors': 'Рецепта для удаления нет'},
-                                status=status.HTTP_400_BAD_REQUEST)
-            Favorite.objects.filter(recipe=recipe, user=user).delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+        if not Recipe.objects.filter(id=pk).exists():
+            return Response({'errors': 'Рецепт не найден'},
+                            status=status.HTTP_404_NOT_FOUND)
+        recipe = Recipe.objects.get(id=pk)
+        if not Favorite.objects.filter(recipe=recipe, user=user).exists():
+            return Response({'errors': 'Рецепта для удаления нет'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        Favorite.objects.filter(recipe=recipe, user=user).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
         methods=['post', 'delete'],
@@ -187,18 +185,17 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 recipe, context={'request': request},
             )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        if request.method == 'DELETE':
-            if not Recipe.objects.filter(id=pk).exists():
-                return Response({'errors': 'Рецепт не найден'},
-                                status=status.HTTP_404_NOT_FOUND)
-            recipe = Recipe.objects.get(id=pk)
-            if not ShoppingCart.objects.filter(
-                recipe=recipe, user=user
-            ).exists():
-                return Response({'errors': 'Такого рецепта в корзине нет'},
-                                status=status.HTTP_400_BAD_REQUEST)
-            ShoppingCart.objects.filter(recipe=recipe, user=user).delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+        if not Recipe.objects.filter(id=pk).exists():
+            return Response({'errors': 'Рецепт не найден'},
+                            status=status.HTTP_404_NOT_FOUND)
+        recipe = Recipe.objects.get(id=pk)
+        if not ShoppingCart.objects.filter(
+            recipe=recipe, user=user
+        ).exists():
+            return Response({'errors': 'Такого рецепта в корзине нет'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        ShoppingCart.objects.filter(recipe=recipe, user=user).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
         methods=['get'],
