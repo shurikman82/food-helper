@@ -126,19 +126,18 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
 
-    def ingredients_data(self, ingredients, recipe):
-        self.ingredients_data = [
-            RecipeIngredient.objects.create(
+    def ingredients_data_create(self, ingredients_data, recipe):
+        RecipeIngredient.objects.bulk_create(
+            RecipeIngredient(
+                ingredient=ingredient.get('ingredient'),
                 recipe=recipe,
-                ingredient_id=ingredient.get('id'),
                 amount=ingredient.get('amount'),
             )
-            for ingredient in ingredients
-        ]
-        RecipeIngredient.objects.bulk_create(self.ingredients_data)
+            for ingredient in ingredients_data
+        )
 
     def create(self, validated_data):
-        ingredients = validated_data.pop('ingredients')
+        ingredients_data = validated_data.pop('ingredients')
         tags = validated_data.pop('tags')
         recipe = Recipe.objects.create(**validated_data)
         recipe.tags.set(tags)
@@ -148,19 +147,19 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         #        ingredient=ingredient.get('ingredient'),
         #        amount=ingredient.get('amount'),
         #    )
-        self.ingredients_data(ingredients, recipe)
+        self.ingredients_data_create(ingredients_data, recipe)
         return recipe
 
     def update(self, instance, validated_data):
-        ingredients = validated_data.pop('ingredients', None)
+        ingredients_data = validated_data.pop('ingredients', None)
         tags = validated_data.pop('tags', None)
-        #if ingredients is None or tags is None:
-        #    raise serializers.ValidationError(
-        #        "Поля ингредиентов не должны быть пустыми."
-        #    )
+        if ingredients_data is None or tags is None:
+            raise serializers.ValidationError(
+                "Поля ингредиентов не должны быть пустыми."
+            )
         instance.tags.set(tags)
         instance.ingredients.clear()
-        self.ingredients_data(ingredients, instance)
+        self.ingredients_data_create(ingredients_data, instance)
         return super().update(instance, validated_data)
 
     def validate_ingredients(self, data):
