@@ -1,7 +1,6 @@
 import re
 
 from django.contrib.auth import get_user_model
-from django.db import transaction
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
                             ShoppingCart, Tag)
@@ -181,7 +180,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         for tag in data:
             if tag in tags:
                 raise serializers.ValidationError(
-                    'Теги должны быть уникальными'
+                    'Теги должны быть уникальными.'
                 )
             tags.append(tag)
         return data
@@ -189,14 +188,16 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
     def validate_cooking_time(self, data):
         if data <= 0:
             raise serializers.ValidationError(
-                'Время приготовления должно быть больше нуля'
+                'Время приготовления должно быть больше нуля.'
             )
         return data
 
     def get_is_favorited(self, obj):
         request = self.context.get('request')
         if request and not request.user.is_anonymous:
-            return Favorite.objects.filter(user=request.user, recipe=obj).exists()
+            return Favorite.objects.filter(
+                user=request.user, recipe=obj,
+            ).exists()
         return False
 
     def get_is_in_shopping_cart(self, obj):
@@ -260,13 +261,6 @@ class FollowSerializer(CustomUserSerializer):
 
     def get_recipes_count(self, obj):
         return obj.recipes.count()
-
-    def validate(self, data):
-        if data['user'] == data['author']:
-            raise serializers.ValidationError(
-                'Нельзя подписаться на себя'
-            )
-        return data
 
 
 class RecipeShortSerializer(serializers.ModelSerializer):

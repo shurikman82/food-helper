@@ -78,7 +78,7 @@ class CustomUserViewSet(UserViewSet):
     def subscriptions(self, request):
         user = self.request.user
         subscriptions_queryset = Follow.objects.filter(user=user)
-        authors = [item.author.id for item in subscriptions_queryset]
+        authors = subscriptions_queryset.values_list('author_id', flat=True)
         users_queryset = User.objects.filter(pk__in=authors)
         paginated_queryset = self.paginate_queryset(users_queryset)
         serializer = FollowSerializer(
@@ -212,13 +212,13 @@ class RecipeViewSet(viewsets.ModelViewSet):
             recipe__shopping_cart__user=request.user
         ).values(
             'ingredient__name', 'ingredient__measurement_unit',
-        ).annotate(amount=Sum('amount'))
+        ).annotate(ingredient_amount=Sum('amount'))
         if ingredients_list:
             pdf.drawString(200, 800, text='Что купить:')
             y_position = 780
             for index, ingredient in enumerate(ingredients_list, start=1):
                 text = (f'{index}. {ingredient["ingredient__name"]}'
-                        f' {ingredient["amount"]}'
+                        f' {ingredient["ingredient_amount"]}'
                         f'{ingredient["ingredient__measurement_unit"]}.')
                 pdf.drawString(100, y_position, text)
                 y_position -= 20
