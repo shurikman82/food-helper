@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
                             ShoppingCart, Tag)
-from rest_framework import serializers
+from rest_framework import serializers, status
 from users.models import Follow
 
 from .fields import Base64ImageField, Hex2NameColor
@@ -122,8 +122,9 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
     tags = serializers.PrimaryKeyRelatedField(
         queryset=Tag.objects.all(), many=True,
     )
-    is_favorited = serializers.SerializerMethodField()
-    is_in_shopping_cart = serializers.SerializerMethodField()
+    is_favorited = serializers.BooleanField(read_only=True, default=False)
+    is_in_shopping_cart = serializers.BooleanField(read_only=True,
+                                                   default=False)
 
     def ingredients_data_create(self, ingredients_data, recipe):
         RecipeIngredient.objects.bulk_create(
@@ -154,7 +155,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         tags = validated_data.pop('tags', None)
         if ingredients_data is None or tags is None:
             raise serializers.ValidationError(
-                "Поля ингредиентов не должны быть пустыми."
+                'Добавьте ингредиенты и теги',
             )
         instance.tags.set(tags)
         instance.ingredients.clear()
@@ -162,25 +163,35 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
     def validate_ingredients(self, data):
-        if not data:
-            raise serializers.ValidationError('Добавьте ингредиенты')
+        ingredients = self.initial_data.get('ingredients')
+        if not ingredients:
+            raise serializers.ValidationError(
+                {'errors': 'Добавьте ингредиенты'},
+                status.HTTP_400_BAD_REQUEST,
+            )
         ingredients = []
         for ingredient in data:
             if ingredient['ingredient'].id in ingredients:
                 raise serializers.ValidationError(
-                    'Ингредиенты должны быть уникальными'
+                    {'errors': 'Ингредиенты должны быть уникальными'},
+                    status.HTTP_400_BAD_REQUEST,
                 )
             ingredients.append(ingredient['ingredient'].id)
         return data
 
     def validate_tags(self, data):
-        if not data:
-            raise serializers.ValidationError('Добавьте теги')
+        tags = self.initial_data.get('tags')
+        if not tags:
+            raise serializers.ValidationError(
+                {'errors': 'Добавьте теги'},
+                status.HTTP_400_BAD_REQUEST,
+            )
         tags = []
         for tag in data:
             if tag in tags:
                 raise serializers.ValidationError(
-                    'Теги должны быть уникальными.'
+                    {'errors': 'Теги должны быть уникальными'},
+                    status.HTTP_400_BAD_REQUEST,
                 )
             tags.append(tag)
         return data
@@ -188,25 +199,26 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
     def validate_cooking_time(self, data):
         if data <= 0:
             raise serializers.ValidationError(
-                'Время приготовления должно быть больше нуля.'
+                {'errors': 'Время приготовления должно быть больше нуля'},
+                status.HTTP_400_BAD_REQUEST,
             )
         return data
 
-    def get_is_favorited(self, obj):
-        request = self.context.get('request')
-        if request and not request.user.is_anonymous:
-            return Favorite.objects.filter(
-                user=request.user, recipe=obj,
-            ).exists()
-        return False
+    #def get_is_favorited(self, obj):
+    #    request = self.context.get('request')
+    #    if request and not request.user.is_anonymous:
+    #        return Favorite.objects.filter(
+    #            user=request.user, recipe=obj,
+    #        ).exists()
+    #    return False
 
-    def get_is_in_shopping_cart(self, obj):
-        request = self.context.get('request')
-        if request and not request.user.is_anonymous:
-            return ShoppingCart.objects.filter(
-               user=request.user, recipe=obj
-            ).exists()
-        return False
+    #def get_is_in_shopping_cart(self, obj):
+    #    request = self.context.get('request')
+    #    if request and not request.user.is_anonymous:
+    #        return ShoppingCart.objects.filter(
+    #           user=request.user, recipe=obj
+    #        ).exists()
+    #    return False
 
     def to_representation(self, instance):
         return RecipeSerializer(
