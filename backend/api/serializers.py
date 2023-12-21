@@ -153,14 +153,29 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         ingredients_data = validated_data.pop('ingredients', None)
         tags = validated_data.pop('tags', None)
-        if ingredients_data is None or tags is None:
-            raise serializers.ValidationError(
-                'Добавьте ингредиенты и теги',
-            )
+        #if ingredients_data is None or tags is None:
+        #    raise serializers.ValidationError(
+        #        'Добавьте ингредиенты и теги',
+        #    )
         instance.tags.set(tags)
         instance.ingredients.clear()
         self.ingredients_data_create(ingredients_data, instance)
         return super().update(instance, validated_data)
+
+    def validate(self, data):
+        ingredients = self.context.get('request').data.get('ingredients')
+        if not ingredients:
+            raise serializers.ValidationError(
+                {'errors': 'Добавьте ингредиенты'},
+                status.HTTP_400_BAD_REQUEST,
+            )
+        tags = self.context.get('request').data.get('tags')
+        if not tags:
+            raise serializers.ValidationError(
+                {'errors': 'Добавьте теги'},
+                status.HTTP_400_BAD_REQUEST,
+            )
+        return data
 
     def validate_ingredients(self, data):
         ingredients = self.initial_data.get('ingredients')

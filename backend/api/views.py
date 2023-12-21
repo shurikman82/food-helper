@@ -11,7 +11,7 @@ from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
-from rest_framework import serializers, status, viewsets
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
 from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
