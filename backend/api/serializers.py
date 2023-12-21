@@ -2,12 +2,13 @@ import re
 
 from django.contrib.auth import get_user_model
 from djoser.serializers import UserCreateSerializer, UserSerializer
-from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
-                            ShoppingCart, Tag)
 from rest_framework import serializers, status
 from users.models import Follow
 
 from .fields import Base64ImageField, Hex2NameColor
+from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
+                            ShoppingCart, Tag)
+
 
 User = get_user_model()
 
@@ -105,7 +106,9 @@ class RecipeSerializer(serializers.ModelSerializer):
     def get_is_favorited(self, obj):
         request = self.context.get('request')
         if request and not request.user.is_anonymous:
-            return Favorite.objects.filter(user=request.user, recipe=obj).exists()
+            return Favorite.objects.filter(
+                user=request.user, recipe=obj,
+            ).exists()
         return False
 
     def get_is_in_shopping_cart(self, instance):
@@ -141,22 +144,12 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         tags = validated_data.pop('tags')
         recipe = Recipe.objects.create(**validated_data)
         recipe.tags.set(tags)
-        #for ingredient in ingredients:
-        #    RecipeIngredient.objects.create(
-        #        recipe=recipe,
-        #        ingredient=ingredient.get('ingredient'),
-        #        amount=ingredient.get('amount'),
-        #    )
         self.ingredients_data_create(ingredients_data, recipe)
         return recipe
 
     def update(self, instance, validated_data):
         ingredients_data = validated_data.pop('ingredients', None)
         tags = validated_data.pop('tags', None)
-        #if ingredients_data is None or tags is None:
-        #    raise serializers.ValidationError(
-        #        'Добавьте ингредиенты и теги',
-        #    )
         instance.tags.set(tags)
         instance.ingredients.clear()
         self.ingredients_data_create(ingredients_data, instance)
@@ -219,22 +212,6 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             )
         return data
 
-    #def get_is_favorited(self, obj):
-    #    request = self.context.get('request')
-    #    if request and not request.user.is_anonymous:
-    #        return Favorite.objects.filter(
-    #            user=request.user, recipe=obj,
-    #        ).exists()
-    #    return False
-
-    #def get_is_in_shopping_cart(self, obj):
-    #    request = self.context.get('request')
-    #    if request and not request.user.is_anonymous:
-    #        return ShoppingCart.objects.filter(
-    #           user=request.user, recipe=obj
-    #        ).exists()
-    #    return False
-
     def to_representation(self, instance):
         return RecipeSerializer(
             instance,
@@ -291,8 +268,6 @@ class FollowSerializer(CustomUserSerializer):
             'email', 'id', 'username', 'first_name', 'last_name',
             'is_subscribed', 'recipes', 'recipes_count'
         )
-
-  
 
     def get_recipes(self, obj):
         recipes_queryset = Recipe.objects.filter(author=obj)

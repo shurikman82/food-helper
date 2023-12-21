@@ -16,17 +16,18 @@ from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
 from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
 from rest_framework.response import Response
-from users.models import Follow
 
 from .filters import IngredientFilter, RecipeFilter
 from .mixins import FavoriteAndShoppingCartActionsMixin
 from .pagination import CustomPagination
 from .permissions import ForRecipePermission
-from .serializers import (FavoriteSerializer, FollowCreateSerializer, FollowSerializer,
+from .serializers import (FavoriteSerializer, FollowCreateSerializer,
+                          FollowSerializer,
                           IngredientSerializer, RecipeCreateSerializer,
                           RecipeIngredientCreateSerializer, RecipeSerializer,
-                          RecipeShortSerializer, ShoppingCartSerializer,
+                          ShoppingCartSerializer,
                           TagSerializer)
+from users.models import Follow
 
 User = get_user_model()
 
@@ -37,13 +38,6 @@ class CustomUserViewSet(UserViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter]
     search_fields = ['username']
 
-    #def validate_username(self, value):
-    #    if User.objects.filter(username=value).exists():
-    #        raise serializers.ValidationError(
-    #            'Пользователь с таким никнеймом уже существует'
-    #        )
-    #    return value
-
     @action(
         methods=['delete', 'post'],
         detail=True,
@@ -53,13 +47,6 @@ class CustomUserViewSet(UserViewSet):
         user = self.request.user
         author = get_object_or_404(User, pk=id)
         if request.method == 'POST':
-            #if user == author:
-            #    return Response({'errors': 'Нельзя подписаться на себя'},
-            #                    status=status.HTTP_400_BAD_REQUEST)
-            #if Follow.objects.filter(user=user, author=author).exists():
-            #    return Response({'errors':
-            #                    'Вы уже подписаны на этого пользователя'},
-            #                    status=status.HTTP_400_BAD_REQUEST)
             serializer = FollowCreateSerializer(
                 user, context={'request': request},
                 data={'author': author.id, 'user': user.id},
@@ -68,14 +55,11 @@ class CustomUserViewSet(UserViewSet):
             Follow.objects.create(user=user, author=author)
             serializer = FollowSerializer(author, context={'request': request})
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        #if not Follow.objects.filter(user=user, author=author).exists():
-        #    return Response({'errors':
-        #                    'Вы не подписаны на этого пользователя'},
-        #                    status=status.HTTP_400_BAD_REQUEST)
+
         serializer = FollowCreateSerializer(
-                user, context={'request': request},
-                data={'author': author.id, 'user': user.id},
-            )
+            user, context={'request': request},
+            data={'author': author.id, 'user': user.id},
+        )
         serializer.is_valid(raise_exception=True)
         Follow.objects.filter(user=user, author=author).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
