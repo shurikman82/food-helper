@@ -22,7 +22,7 @@ from .filters import IngredientFilter, RecipeFilter
 from .mixins import FavoriteAndShoppingCartActionsMixin
 from .pagination import CustomPagination
 from .permissions import ForRecipePermission
-from .serializers import (FavoriteSerializer, FollowSerializer,
+from .serializers import (FavoriteSerializer, FollowCreateSerializer, FollowSerializer,
                           IngredientSerializer, RecipeCreateSerializer,
                           RecipeIngredientCreateSerializer, RecipeSerializer,
                           RecipeShortSerializer, ShoppingCartSerializer,
@@ -53,20 +53,30 @@ class CustomUserViewSet(UserViewSet):
         user = self.request.user
         author = get_object_or_404(User, pk=id)
         if request.method == 'POST':
-            if user == author:
-                return Response({'errors': 'Нельзя подписаться на себя'},
-                                status=status.HTTP_400_BAD_REQUEST)
-            if Follow.objects.filter(user=user, author=author).exists():
-                return Response({'errors':
-                                'Вы уже подписаны на этого пользователя'},
-                                status=status.HTTP_400_BAD_REQUEST)
+            #if user == author:
+            #    return Response({'errors': 'Нельзя подписаться на себя'},
+            #                    status=status.HTTP_400_BAD_REQUEST)
+            #if Follow.objects.filter(user=user, author=author).exists():
+            #    return Response({'errors':
+            #                    'Вы уже подписаны на этого пользователя'},
+            #                    status=status.HTTP_400_BAD_REQUEST)
+            serializer = FollowCreateSerializer(
+                user, context={'request': request},
+                data={'author': author.id, 'user': user.id},
+            )
+            serializer.is_valid(raise_exception=True)
             Follow.objects.create(user=user, author=author)
             serializer = FollowSerializer(author, context={'request': request})
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        if not Follow.objects.filter(user=user, author=author).exists():
-            return Response({'errors':
-                            'Вы не подписаны на этого пользователя'},
-                            status=status.HTTP_400_BAD_REQUEST)
+        #if not Follow.objects.filter(user=user, author=author).exists():
+        #    return Response({'errors':
+        #                    'Вы не подписаны на этого пользователя'},
+        #                    status=status.HTTP_400_BAD_REQUEST)
+        serializer = FollowCreateSerializer(
+                user, context={'request': request},
+                data={'author': author.id, 'user': user.id},
+            )
+        serializer.is_valid(raise_exception=True)
         Follow.objects.filter(user=user, author=author).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 

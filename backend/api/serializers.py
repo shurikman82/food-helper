@@ -235,8 +235,38 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         )
 
 
+class FollowCreateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Follow
+        fields = ('user', 'author')
+
+    def validate(self, data):
+        if self.context['request'].method == 'POST':
+            if self.context['request'].user == data['author']:
+                raise serializers.ValidationError(
+                    'Нельзя подписаться на самого себя',
+                )
+            if Follow.objects.filter(
+                user=self.context['request'].user,
+                author=data['author']
+            ).exists():
+                raise serializers.ValidationError(
+                    'Вы уже подписаны на этого пользователя',
+                )
+        if self.context['request'].method == 'DELETE':
+            if not Follow.objects.filter(
+                user=self.context['request'].user,
+                author=data['author']
+            ).exists():
+                raise serializers.ValidationError(
+                    'Вы не подписаны на этого пользователя',
+                )
+
+        return data
+
+
 class FollowSerializer(CustomUserSerializer):
-    #is_subscribed = serializers.SerializerMethodField()
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
 
@@ -247,14 +277,7 @@ class FollowSerializer(CustomUserSerializer):
             'is_subscribed', 'recipes', 'recipes_count'
         )
 
-    #def get_is_subscribed(self, obj):
-    #    request = self.context.get('request')
-    #    if request and not request.user.is_anonymous:
-    #        return Follow.objects.filter(
-    #            user=request.user,
-    #            author=obj
-    #        ).exists()
-    #    return False
+  
 
     def get_recipes(self, obj):
         recipes_queryset = Recipe.objects.filter(author=obj)
