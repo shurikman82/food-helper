@@ -16,10 +16,6 @@ class CustomUser(AbstractUser):
                                   verbose_name='Имя пользователя')
     last_name = models.CharField(max_length=150,
                                  verbose_name='Фамилия пользователя')
-    #is_subscribed = models.BooleanField(
-    #    default=False,
-    #    verbose_name='Подписан ли текущий пользователь на этого',
-    #)
     password = models.CharField(max_length=150,
                                 verbose_name='Пароль')
 
