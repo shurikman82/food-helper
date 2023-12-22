@@ -3,11 +3,11 @@ import re
 from django.contrib.auth import get_user_model
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from rest_framework import serializers, status
-from users.models import Follow
 
 from .fields import Base64ImageField, Hex2NameColor
 from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
                             ShoppingCart, Tag)
+from users.models import Follow
 
 
 User = get_user_model()
@@ -125,9 +125,6 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
     tags = serializers.PrimaryKeyRelatedField(
         queryset=Tag.objects.all(), many=True,
     )
-    is_favorited = serializers.BooleanField(read_only=True, default=False)
-    is_in_shopping_cart = serializers.BooleanField(read_only=True,
-                                                   default=False)
 
     def ingredients_data_create(self, ingredients_data, recipe):
         RecipeIngredient.objects.bulk_create(
@@ -156,13 +153,13 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
     def validate(self, data):
-        ingredients = self.context.get('request').data.get('ingredients')
+        ingredients = data.get('ingredients')
         if not ingredients:
             raise serializers.ValidationError(
                 {'errors': 'Добавьте ингредиенты'},
                 status.HTTP_400_BAD_REQUEST,
             )
-        tags = self.context.get('request').data.get('tags')
+        tags = data.get('tags')
         if not tags:
             raise serializers.ValidationError(
                 {'errors': 'Добавьте теги'},
@@ -171,8 +168,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         return data
 
     def validate_ingredients(self, data):
-        ingredients = self.initial_data.get('ingredients')
-        if not ingredients:
+        if not data:
             raise serializers.ValidationError(
                 {'errors': 'Добавьте ингредиенты'},
                 status.HTTP_400_BAD_REQUEST,
@@ -188,8 +184,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         return data
 
     def validate_tags(self, data):
-        tags = self.initial_data.get('tags')
-        if not tags:
+        if not data:
             raise serializers.ValidationError(
                 {'errors': 'Добавьте теги'},
                 status.HTTP_400_BAD_REQUEST,
@@ -222,8 +217,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         model = Recipe
         fields = (
             'id', 'author', 'ingredients', 'tags', 'image',
-            'name', 'text', 'cooking_time', 'is_favorited',
-            'is_in_shopping_cart',
+            'name', 'text', 'cooking_time',
         )
 
 
