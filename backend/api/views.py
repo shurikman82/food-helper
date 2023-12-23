@@ -6,8 +6,7 @@ from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
-from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
-                            ShoppingCart, Tag)
+
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
@@ -21,6 +20,8 @@ from .filters import IngredientFilter, RecipeFilter
 from .mixins import FavoriteAndShoppingCartActionsMixin
 from .pagination import CustomPagination
 from .permissions import ForRecipePermission
+from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
+                            ShoppingCart, Tag)
 from .serializers import (FavoriteSerializer, FollowCreateSerializer,
                           FollowSerializer,
                           IngredientSerializer, RecipeCreateSerializer,
@@ -52,6 +53,7 @@ class CustomUserViewSet(UserViewSet):
                 data={'author': author.id, 'user': user.id},
             )
             serializer.is_valid(raise_exception=True)
+            #serializer.save()
             Follow.objects.create(user=user, author=author)
             serializer = FollowSerializer(author, context={'request': request})
             return Response(serializer.data, status=status.HTTP_201_CREATED)
