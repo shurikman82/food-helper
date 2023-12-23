@@ -47,21 +47,15 @@ class CustomUserViewSet(UserViewSet):
     def subscribe(self, request, id=None):
         user = self.request.user
         author = get_object_or_404(User, pk=id)
-        if request.method == 'POST':
-            serializer = FollowCreateSerializer(
-                user, context={'request': request},
-                data={'author': author.id, 'user': user.id},
-            )
-            serializer.is_valid(raise_exception=True)
-            #serializer.save()
-            Follow.objects.create(user=user, author=author)
-            serializer = FollowSerializer(author, context={'request': request})
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-
         serializer = FollowCreateSerializer(
             user, context={'request': request},
             data={'author': author.id, 'user': user.id},
         )
+        if request.method == 'POST':
+            serializer.is_valid(raise_exception=True)
+            Follow.objects.create(user=user, author=author)
+            serializer = FollowSerializer(author, context={'request': request})
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         serializer.is_valid(raise_exception=True)
         Follow.objects.filter(user=user, author=author).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

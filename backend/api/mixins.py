@@ -26,7 +26,7 @@ class FavoriteAndShoppingCartActionsMixin:
         if not recipe_objects:
             return Response({'errors': 'Рецепт не найден'},
                             status=status.HTTP_404_NOT_FOUND)
-        recipe = Recipe.objects.get(id=pk)
+        recipe = recipe_objects
         if not model.objects.filter(recipe=recipe, user=user).exists():
             return Response({'errors': 'Рецепта для удаления нет'},
                             status=status.HTTP_400_BAD_REQUEST)
