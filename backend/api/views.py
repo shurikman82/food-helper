@@ -6,7 +6,6 @@ from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
-
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
@@ -40,24 +39,34 @@ class CustomUserViewSet(UserViewSet):
     search_fields = ['username']
 
     @action(
-        methods=['delete', 'post'],
+        methods=['post', 'delete'],
         detail=True,
         permission_classes=[IsAuthenticated],
     )
     def subscribe(self, request, id=None):
+        if request.method == 'POST':
+            return self.subscribe_action(request, id)
+        return self.unsubscribe_action(request, id)
+
+    def subscribe_action(self, request, id):
         user = self.request.user
         author = get_object_or_404(User, pk=id)
         serializer = FollowCreateSerializer(
-            user, context={'request': request},
+            context={'request': request},
             data={'author': author.id, 'user': user.id},
         )
-        if request.method == 'POST':
-            serializer.is_valid(raise_exception=True)
-            Follow.objects.create(user=user, author=author)
-            serializer = FollowSerializer(author, context={'request': request})
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
         serializer.is_valid(raise_exception=True)
-        Follow.objects.filter(user=user, author=author).delete()
+        serializer.save()
+        serializer = FollowSerializer(author, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def unsubscribe_action(self, request, id):
+        user = self.request.user
+        author = get_object_or_404(User, pk=id)
+        subscription = Follow.objects.filter(author=author.id, user=user.id)
+        if not subscription:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        subscription.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
