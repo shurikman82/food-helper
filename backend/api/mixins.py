@@ -15,7 +15,7 @@ class FavoriteAndShoppingCartActionsMixin:
                 return Response({'errors': 'Рецепт не найден'},
                                 status=status.HTTP_400_BAD_REQUEST)
             recipe = Recipe.objects.get(id=pk)
-            if model.objects.filter(recipe=recipe).exists():
+            if model.objects.filter(recipe=recipe, user=user).exists():
                 return Response({'errors': 'Рецепт уже в избранном'},
                                 status=status.HTTP_400_BAD_REQUEST)
             model.objects.create(user=user, recipe=recipe)
@@ -26,8 +26,9 @@ class FavoriteAndShoppingCartActionsMixin:
         if not recipe_objects:
             return Response({'errors': 'Рецепт не найден'},
                             status=status.HTTP_404_NOT_FOUND)
-        if not model.objects.filter(recipe=recipe_objects, user=user).exists():
+        recipe = Recipe.objects.get(id=pk)
+        if not model.objects.filter(recipe=recipe, user=user).exists():
             return Response({'errors': 'Рецепта для удаления нет'},
                             status=status.HTTP_400_BAD_REQUEST)
-        model.objects.filter(recipe=recipe_objects, user=user).delete()
+        model.objects.filter(recipe=recipe, user=user).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
