@@ -12,4 +12,9 @@ Foodgram-Project-React - это полнофункциональное веб-п
 
 Автор: Александр Русанов, shurik.82rusanov@yandex.ru
 
+Host: shurikrusanov.ddns.net,
+superuser:
+    login: shurik,
+    password: 25121982aA
+
 
